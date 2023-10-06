@@ -26,4 +26,4 @@ tbl-cap-location: bottom
 ---
 ## Introducción 
 
-En esta tarea, utilizaremos los datos utilizaremos los datos mensuales de concentración de monóxido de carbono (CO), recopilados en la estación de monitores de Pudahuel, para ajustar un modelo de regresión que nos permita predecir la concentración de este contaminante a lo largo del tiempo. 
+En esta tarea, utilizaremos los datos mensuales de concentración de monóxido de carbono (CO), recopilados en la estación de monitores de Pudahuel, para ajustar un modelo de regresión que nos permita predecir la concentración de este contaminante a lo largo del tiempo. 
