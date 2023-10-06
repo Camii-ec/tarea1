@@ -51,3 +51,4 @@ Fn = ecdf(scale(X))
 plot(Fn(x)~x, type = "s", col = col, lwd = 2, xlab = "Standardized Residuals", main = expression("Empirical Cumulative Distribution Function"), ylab = "")
 lines(pnorm(x, mean = 0, sd = 1)~x, lwd = 2, col = border)
 }
+

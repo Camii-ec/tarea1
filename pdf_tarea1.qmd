@@ -27,3 +27,159 @@ tbl-cap-location: bottom
 ## Introducción 
 
 En esta tarea, utilizaremos los datos mensuales de concentración de monóxido de carbono (CO), recopilados en la estación de monitores de Pudahuel, para ajustar un modelo de regresión que nos permita predecir la concentración de este contaminante a lo largo del tiempo. 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = F, warning = F)
+```
+
+
+```{r}
+# Paquetes
+library(tidyverse)
+library(dplyr)
+library(lubridate) # por el año
+library(patchwork)
+# library(kableExtra)
+# Analisis de la serie de tiempo
+library(lmtest)
+library(forecast)
+
+## Funciones 
+source("TS.diag.R")
+source("summary.arima.R")
+source("salida.arima.R")
+```
+
+```{r}
+# Carga de datos
+data <- rio::import("datos_970410_231003.csv")
+
+df <- janitor::clean_names(data)
+
+# Ponemos el formato de las fechas
+df$fecha_yymmdd = as.Date(
+  # para los que son 00 0X 01
+  ifelse(df$fecha_yymmdd < 1000, 
+         paste0("000", df$fecha_yymmdd),
+         # para los 3 que son 00 1X 01
+         ifelse(df$fecha_yymmdd < 2000, 
+                paste0("00", df$fecha_yymmdd),
+                # Para los que son 0X XX 01
+                ifelse(df$fecha_yymmdd < 100000, 
+                       paste0("0", df$fecha_yymmdd),
+                       as.character(df$fecha_yymmdd)))),
+  format = "%y%m%d"
+)
+
+# Analizaremos el monoxido de carbono
+df$co <- ifelse(
+  df$registros_validados != "",
+  # Primero los registros válidos
+  df$registros_validados,
+  ifelse(
+    !is.na(df$registros_preliminares),
+    # Segundo los registros preliminares
+    df$registros_preliminares,
+    # Tercero los registros no válidos
+    df$registros_no_validados
+  )
+)
+
+# Declaramos de donde vienen los datos
+# por qué? pues porque si
+df$tipo_registro = ifelse(
+  df$registros_validados != "",
+  # Primero los registros válidos
+  "Registro válido",
+  ifelse(
+    !is.na(df$registros_preliminares),
+    # Segundo los registros preliminares
+    "Registro preliminar",
+    # Tercero los registros no válidos
+    "Registro no válido"
+  )
+)
+
+# Declaramos los datos que usaremos en la construcción del modelo
+# y los datos que se ocuparán en la validación
+df$uso =ifelse(df$fecha_yymmdd < as.Date("2022-12-31"),
+               "Entrenamiento",
+               "Validación")
+
+df$co <- as.numeric(gsub(",", ".", df$co))
+train <- df %>% 
+  filter(uso == "Entrenamiento")
+
+Xt <- na.omit(train$co)
+Xt <- ts(Xt, start = c(1997,5), frequency = 12)
+t <- as.numeric(time(Xt))
+```
+
+
+## Análisis Exploratorio
+
+Los niveles de Monóxido de Carbono registrados en Pudahuel presentan los siguientes valores:
+
+```{r, fig.width = 10, fig.height = 3}
+# Graficos de series de tiempo
+time_serie = train %>% 
+  ggplot(aes(x = fecha_yymmdd, y = co)) +
+  geom_line(color = "#808080", size = 0.8) +  
+  labs(title = "Variación del Monóxido de Carbono en ppm en Estación Pudahuel",
+       subtitle = "Registros válidos desde mayo de 1997 a diciembre del 2022",
+       caption = "Datos otorgados por Ministerio del Medio Ambiente de Chile",
+       x = "Fecha", y = "Valor") +
+  scale_x_date(date_breaks = "2 year", date_labels = "%Y") +
+  theme_bw() +
+  theme(plot.title = element_text(size = 10,
+                                  #face = "bold",
+                                  color = "black",
+                                  hjust = 0.5),
+        plot.subtitle = element_text(size = 9,
+                                     #face = "bold",
+                                     color = "black",
+                                     hjust = 0.5),
+        axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+# Boxplot de los datos  Esta bonito, a ponerlo
+box_plot = df %>%
+  ggplot(aes(x = co, y = 0)) +
+  # geom_violin(color = "purple3") +
+  geom_boxplot(fill = "#808080",
+               width = 0.3) +
+  ylim(c(-0.5, 0.5)) +
+  theme_bw() +
+  xlab("CO ppm") +
+  theme(axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.title.y = element_blank(),
+        plot.title = element_text(size = 10,
+                                  #face = "bold",
+                                  color = "black",
+                                  hjust = 0.5),
+        plot.subtitle = element_text(size = 9,
+                                     #face = "bold",
+                                     color = "black",
+                                     hjust = 0.5),
+        axis.title.x = element_text(size = 8)) +
+  labs(title = "Boxplot de Monóxido de Carbono",
+       subtitle = "Medida en Pudahuel")
+
+time_serie | box_plot
+```
+
+Del gráfico anterior se puede se puede ver que los niveles de Monóxido de Carbono se concentran principalmente se concentran en valores cercanos a $0.5$, igualmente se observa con una gran varianza. a modo de resumen se puede presentar la tabla de abajo, resumiendo los valores del gráfico anterior.
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{| c | c | c | c | c | c | c |}
+\toprule
+Mínimo & 1° Cuartil & Mediana & Promedio & 3° Cuartil & Máximo & Valores NA \\
+\midrule
+0.1305 & 0.3318 & 0.5716 & 0.8599 & 1.2484 & 3.4134 & 3 \\
+\bottomrule
+\end{tabular}
+\caption{Tabla con Cuartiles}
+\label{tab:cuartiles}
+\end{table}
