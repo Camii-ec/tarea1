@@ -46,6 +46,16 @@ pacf(Xt)
 
 Xt_new <- fitted(fit)
 
+# De la vilca
+predicciones_validacion <- forecast(fit, newdata = t_test)
+
+autoplot(predicciones_validacion)
+
+summary(predicciones_validacion)
+
+valores_predichos_validacion <- predicciones_validacion$mean
+
+
 autoplot(Xt_new)+ 
   geom_line(color = "#808080", size = 0.8) +  
   labs(title = "Valores ajustados con transformación Box-Cox del\n Monóxido de Carbono en ppm en Estación Pudahuel",
