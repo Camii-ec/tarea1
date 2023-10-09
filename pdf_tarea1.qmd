@@ -177,12 +177,94 @@ Del gráfico anterior se puede se puede ver que los niveles de Monóxido de Carb
 \toprule
 Mínimo & 1° Cuartil & Mediana & Promedio & 3° Cuartil & Máximo & Valores NA \\
 \midrule
-0.1305 & 0.3318 & 0.5716 & 0.8599 & 1.2484 & 3.4134 & 3 \\
+0.1305 & 0.3318 & 0.5716 & 0.8599 & 1.2484 & 3.4134 & 2 \\
 \bottomrule
 \end{tabular}
 \caption{Tabla con Cuartiles}
 \label{tab:cuartiles}
 \end{table}
+
+Los datos temporales anteriormente presentados presentan los siguientes gráficos de autocorrelación y de autocorrelación parcial:
+
+```{r}
+# ACF base
+acf <- acf(Xt, plot = FALSE)
+acf_data <- data.frame(Lag = acf$lag,
+                       ACF = acf$acf)
+
+# PACF base
+pacf <- pacf(Xt, plot = FALSE)
+pacf_data <- data.frame(Lag = pacf$lag,
+                        PACF = pacf$acf)
+
+n = nrow(acf_data)
+```
+
+```{r, fig.width = 10, fig.height = 3}
+ACF = ggplot(acf_data, aes(x = Lag, y = ACF)) +
+  geom_hline(yintercept = 0,
+             linetype = "dashed") + 
+  geom_hline(yintercept = 1.96/sqrt(n),
+             linetype = "dashed",
+             col = "blue") + 
+  geom_hline(yintercept = -1.96/sqrt(n),
+             linetype = "dashed",
+             col = "blue") + 
+  geom_segment(aes(xend = Lag,
+                   yend = 0),
+               color = "purple",
+               size = 1) + # Líneas verticales
+  geom_point(size = 2.5,
+             shape = 21,
+             fill = "purple") + # Puntos de color en el extremo de las líneas
+  labs(x = "Lag",
+       y = "ACF",
+       title = "Gráfico de Autocorrelación de los datos") +
+  theme_bw() +
+  theme(axis.text.y = element_text(size = 8),
+        # axis.ticks.y = element_blank(),
+        axis.title.y = element_text(size = 8),
+        plot.title = element_text(size = 10,
+                                  #face = "bold",
+                                  color = "black",
+                                  hjust = 0.5),
+        axis.title.x = element_text(size = 8),
+        axis.text.x = element_text(size = 8))
+
+PACF = pacf_data %>%
+  ggplot(aes(x = Lag, y = PACF)) +
+  geom_hline(yintercept = 0,
+             linetype = "dashed") + 
+  geom_hline(yintercept = 1.96/sqrt(n),
+             linetype = "dashed",
+             col = "blue") + 
+  geom_hline(yintercept = -1.96/sqrt(n),
+             linetype = "dashed",
+             col = "blue") + 
+  geom_segment(aes(xend = Lag,
+                   yend = 0),
+               color = "purple",
+               size = 1) + # Líneas verticales
+  geom_point(size = 2.5,
+             shape = 21,
+             fill = "purple") + # Puntos de color en el extremo de las líneas
+  labs(x = "Lag",
+       y = "ACF",
+       title = "Gráfico de Autocorrelación Parcial de los datos") +
+  theme_bw() +
+  theme(axis.text.y = element_text(size = 8),
+        # axis.ticks.y = element_blank(),
+        axis.title.y = element_text(size = 8),
+        plot.title = element_text(size = 10,
+                                  #face = "bold",
+                                  color = "black",
+                                  hjust = 0.5),
+        axis.title.x = element_text(size = 8),
+        axis.text.x = element_text(size = 8))
+
+(ACF | PACF)
+```
+
 
 ## Ajuste del modelo
 
