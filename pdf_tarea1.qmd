@@ -206,19 +206,78 @@ t <- as.numeric(time(Xt))
 lambda <- forecast::BoxCox.lambda(Xt, method = "guerrero")
 fit <- forecast::auto.arima(Xt, lambda = lambda)
 
+# ACF
 acf_residuals <- acf(fit$residuals, plot = FALSE)
-
 acf_data <- data.frame(Lag = acf_residuals$lag, ACF = acf_residuals$acf)
 
-ggplot(acf_data, aes(x = Lag, y = ACF)) +
-  geom_hline(yintercept = 0, linetype = "dashed") + 
-  geom_hline(yintercept = 1.96/sqrt(nrow(acf_data)), linetype = "dashed", col = "blue") + 
-  geom_hline(yintercept = -1.96/sqrt(nrow(acf_data)), linetype = "dashed", col = "blue") + 
-  geom_bar(stat = "identity", fill = "purple") + 
-  labs(x = "Lag", y = "ACF", title = "Gráfico de Autocorrelación para los residuos del modelo AR(1)") +
-  theme_bw()
+# PACF
+pacf_residuals <- pacf(fit$residuals, plot = FALSE)
+pacf_data <- data.frame(Lag = pacf_residuals$lag, PACF = pacf_residuals$acf)
+
+n = nrow(acf_data)
 ```
 
+```{r, fig.width = 10, fig.height = 3}
+acf = ggplot(acf_data, aes(x = Lag, y = ACF)) +
+  geom_hline(yintercept = 0,
+             linetype = "dashed") + 
+  geom_hline(yintercept = 1.96/sqrt(n),
+             linetype = "dashed",
+             col = "blue") + 
+  geom_hline(yintercept = -1.96/sqrt(n),
+             linetype = "dashed",
+             col = "blue") + 
+  geom_segment(aes(xend = Lag,
+                   yend = 0),
+               color = "purple",
+               size = 1) + # Líneas verticales
+  geom_point(size = 2.5,
+             shape = 21,
+             fill = "purple") + # Puntos de color en el extremo de las líneas
+  labs(x = "Lag",
+       y = "ACF",
+       title = "Gráfico de Autocorrelación para los residuos del modelo AR(1)") +
+  theme_bw() +
+  theme(axis.text.y = element_text(size = 8),
+        # axis.ticks.y = element_blank(),
+        axis.title.y = element_text(size = 8),
+        plot.title = element_text(size = 10,
+                                  face = "bold", # Titulo en negrita
+                                  color = "black",
+                                  hjust = 0.5),
+        axis.title.x = element_text(size = 8),
+        axis.text.x = element_text(size = 8))
 
+pacf = pacf_data %>%
+  ggplot(aes(x = Lag, y = PACF)) +
+  geom_hline(yintercept = 0,
+             linetype = "dashed") + 
+  geom_hline(yintercept = 1.96/sqrt(n),
+             linetype = "dashed",
+             col = "blue") + 
+  geom_hline(yintercept = -1.96/sqrt(n),
+             linetype = "dashed",
+             col = "blue") + 
+  geom_segment(aes(xend = Lag,
+                   yend = 0),
+               color = "purple",
+               size = 1) + # Líneas verticales
+  geom_point(size = 2.5,
+             shape = 21,
+             fill = "purple") + # Puntos de color en el extremo de las líneas
+  labs(x = "Lag",
+       y = "ACF",
+       title = "Gráfico de Autocorrelación Parcial para los residuos del modelo AR(1)") +
+  theme_bw() +
+  theme(axis.text.y = element_text(size = 8),
+        # axis.ticks.y = element_blank(),
+        axis.title.y = element_text(size = 8),
+        plot.title = element_text(size = 10,
+                                  face = "bold", # Titulo en negrita
+                                  color = "black",
+                                  hjust = 0.5),
+        axis.title.x = element_text(size = 8),
+        axis.text.x = element_text(size = 8))
 
-
+(acf | pacf)
+```
