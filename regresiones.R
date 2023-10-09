@@ -19,7 +19,7 @@ df_train <- df %>%
 df_train <- df_train[df_train$fecha_yymmdd >= as.Date("1997-12-31"),]
 
 xt_train <- ts(df_train$co, start = c(1997, 5), frequency = 12)
-xt_train[is.na(xt_train)] <- c(mean(julio), mean(junio))
+xt_train[is.na(xt_train)] <- c(mean(junio), mean(julio))
 
 sum(is.na(xt_train))
 sum(is.na(df$co))
@@ -93,22 +93,22 @@ ggPacf(mod$residuals)
 a <- MASS::boxcox(mod)
 lambda <- a$x[which.max(a$y)]
 
-xt_train2.0 <- (xt_train^lambda - 1)/lambda
-xt_test2.0 <- (xt_test^lambda - 1)/lambda
+t_train2.0 <- (t_train^lambda - 1)/lambda
+t_test2.0 <- (t_test^lambda - 1)/lambda
 
 ## Ajuste 2.0 con la transformación de box-cox ---
 
-train2.0 <- data.frame(x = xt_train2.0, t = t_train, D = as.factor(D))
-test2.0 <- data.frame(x = xt_test2.0, t = t_test, D = as.factor(1:9))
+train2.0 <- data.frame(x = xt_train, t = t_train2.0, D = as.factor(D))
+test2.0 <- data.frame(x = xt_test, t = t_test2.0, D = as.factor(1:9))
 
 mod <- lm(x ~ t*(D), data = train2.0) # Interacciones significativas
 summary(mod)
 
-plot(xt_train2.0)
+plot(xt_train)
 lines(mod$fitted.values ~ t_train, col = "red")
 
 pred <- forecast(mod, newdata = test2.0)
-plot(xt_test2.0, lwd = 2)
+plot(xt_test, lwd = 2)
 lines(ts(pred$mean, start = c(2023, 1), frequency = 12), 
       col = "red", lty = 3, lwd = 2)
 # YA NO ES COMO EL HOYO X2
@@ -120,16 +120,13 @@ lmtest::bptest(mod) # ES HOMOCEDÁSTICO
 acf(mod$residuals)
 pacf(mod$residuals)
 
-y <- ts(pred$mean, start = c(2023, 1), frequency = 12)
-pred_box <- (y*lambda+1)^(1/lambda)
-
-MLmetrics::MAPE(y_pred = pred_box,
+MLmetrics::MAPE(y_pred = pred$mean,
                 y_true = xt_test)*100 # TA MUY BONITA LA WEÁ, YA NO VALE PICO
 
-sqrt(MLmetrics::MSE(y_pred = pred_box,
+sqrt(MLmetrics::MSE(y_pred = pred$mean,
                     y_true = xt_test)) #RMSE
 
-MLmetrics::MAE(y_pred = pred_box,
+MLmetrics::MAE(y_pred = pred$mean,
                y_true = xt_test) #MAE
 
 
