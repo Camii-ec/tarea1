@@ -24,16 +24,10 @@ crossref:
   tbl-prefix: Tabla
 tbl-cap-location: bottom
 ---
-## Introducción 
-
-En esta tarea, utilizaremos los datos mensuales de concentración de monóxido de carbono (CO), recopilados en la estación de monitores de Pudahuel, para ajustar un modelo de regresión que nos permita predecir la concentración de este contaminante a lo largo del tiempo. 
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, message = F, warning = F)
-```
 
-
-```{r}
 # Paquetes
 library(tidyverse)
 library(dplyr)
@@ -48,14 +42,20 @@ library(forecast)
 source("TS.diag.R")
 source("summary.arima.R")
 source("salida.arima.R")
-```
 
-```{r}
 # Carga de datos
 data <- rio::import("datos_970410_231003.csv")
 
 df <- janitor::clean_names(data)
+```
 
+
+## Introducción 
+
+En esta tarea, utilizaremos los datos mensuales de concentración de monóxido de carbono (CO), recopilados en la estación de monitores de Pudahuel, para ajustar un modelo de regresión que nos permita predecir la concentración de este contaminante a lo largo del tiempo. 
+
+
+```{r echo=FALSE}
 # Ponemos el formato de las fechas
 df$fecha_yymmdd = as.Date(
   # para los que son 00 0X 01
@@ -183,3 +183,42 @@ Mínimo & 1° Cuartil & Mediana & Promedio & 3° Cuartil & Máximo & Valores NA 
 \caption{Tabla con Cuartiles}
 \label{tab:cuartiles}
 \end{table}
+
+## Ajuste del modelo
+
+### Ajuste modelo *lineal y no lineal*
+
+### Ajuste con función `auto.arima()`
+
+Si se realiza el ajuste de la serie de tiempo usando la función `auto.arima()` de la librería `forecast`. Esta recomienda usar un modelo AR(1) en los datos y de los resultados del ajuste, es posible dar razones de porque es recomendable usar este modelo:
+
+- Los residuos son homocedasticos, esto es sencillo de notar, ya que, el test de Breusch-Pagan no se rechaza a un nivel de confianza al $5\%$, por lo que se permite afirmar que los residuos son de varianza constante.
+
+- No hay autocorrelación en los residuos: Como el ínteres es que no existan patrones en los residuos, es bastante bueno que el modelo AR(1) que recomienda la función `auto.arima()`, demuestre que no pasa:
+
+```{r echo = FALSE}
+train <- df %>% 
+  filter(uso == "Entrenamiento")
+
+Xt <- na.omit(train$co)
+Xt <- ts(Xt, start = c(1997,5), frequency = 12)
+t <- as.numeric(time(Xt))
+lambda <- forecast::BoxCox.lambda(Xt, method = "guerrero")
+fit <- forecast::auto.arima(Xt, lambda = lambda)
+
+acf_residuals <- acf(fit$residuals, plot = FALSE)
+
+acf_data <- data.frame(Lag = acf_residuals$lag, ACF = acf_residuals$acf)
+
+ggplot(acf_data, aes(x = Lag, y = ACF)) +
+  geom_hline(yintercept = 0, linetype = "dashed") + 
+  geom_hline(yintercept = 1.96/sqrt(nrow(acf_data)), linetype = "dashed", col = "blue") + 
+  geom_hline(yintercept = -1.96/sqrt(nrow(acf_data)), linetype = "dashed", col = "blue") + 
+  geom_bar(stat = "identity", fill = "purple") + 
+  labs(x = "Lag", y = "ACF", title = "Gráfico de Autocorrelación para los residuos del modelo AR(1)") +
+  theme_bw()
+```
+
+
+
+

@@ -47,7 +47,7 @@ pacf(Xt)
 Xt_new <- fitted(fit)
 
 # De la vilca
-predicciones_validacion <- forecast(fit, newdata = t_test)
+predicciones_validacion <- forecast(fit, newdata = t_test,h = 11)
 
 autoplot(predicciones_validacion)
 
