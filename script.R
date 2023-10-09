@@ -66,13 +66,14 @@ df$tipo_registro = ifelse(
 
 # Declaramos los datos que usaremos en la construcción del modelo
 # y los datos que se ocuparán en la validación
-df$uso =ifelse(df$fecha_yymmdd < as.Date("2022-12-31"),
+df$uso =ifelse(df$fecha_yymmdd <= as.Date("2022-12-31"),
                  "Entrenamiento",
                  "Validación")
 
 
 
 df$co <- as.numeric(gsub(",", ".", df$co))
+which(is.na(df$co))
 
 df %>%
   select(fecha_yymmdd, co, tipo_registro, uso) %>%
