@@ -18,7 +18,7 @@ df_train <- df %>%
 
 df_train <- df_train[df_train$fecha_yymmdd >= as.Date("1997-12-31"),]
 
-xt_train <- ts(df_train$co, start = c(1997, 5), frequency = 12)
+xt_train <- ts(df_train$co, start = c(1998, 1), frequency = 12)
 xt_train[is.na(xt_train)] <- c(mean(junio), mean(julio))
 
 sum(is.na(xt_train))
@@ -101,7 +101,7 @@ xt_test2.0 <- (xt_test^lambda - 1)/lambda
 train2.0 <- data.frame(x = xt_train2.0, t = t_train, D = as.factor(D))
 test2.0 <- data.frame(x = xt_test2.0, t = t_test, D = as.factor(1:9))
 
-mod <- lm(x ~ t*(D), data = train2.0) # Interacciones significativas
+mod <- lm(x ~ t*(D), data = train2.0) 
 summary(mod)
 
 plot(xt_train2.0)

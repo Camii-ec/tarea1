@@ -197,7 +197,7 @@ pacf <- pacf(Xt, plot = FALSE)
 pacf_data <- data.frame(Lag = pacf$lag,
                         PACF = pacf$acf)
 
-n = nrow(acf_data)
+n = nrow(df)
 ```
 
 ```{r, fig.width = 10, fig.height = 3}
@@ -268,9 +268,152 @@ PACF = pacf_data %>%
 
 ## Ajuste del modelo
 
-### Ajuste modelo *lineal y no lineal*
+Como se pudo ver en el gráfico de autocorrelación, presentamos estacionalidad en los datos. Es por esto que utilizaremos la transformación de box-cox en ambos ajustes.
+
+### Ajuste modelo de regresión lineal con dummies
+
+```{r}
+#| echo: false
+#| results: hide
+
+junio <- na.omit(subset(df, format(fecha_yymmdd, "%m") == "06")$co)
+julio <- na.omit(subset(df, format(fecha_yymmdd, "%m") == "07")$co)
+
+
+df_train <- df %>%
+  filter(uso == "Entrenamiento") %>% 
+  select(-uso) 
+
+df_train <- df_train[df_train$fecha_yymmdd >= as.Date("1997-12-31"),]
+
+xt_train <- ts(df_train$co, start = c(1998, 1), frequency = 12)
+xt_train[is.na(xt_train)] <- c(mean(junio), mean(julio))
+
+t_train <- c(time(xt_train))
+
+
+df_test <- df %>% 
+  filter(uso == "Validación") %>% 
+  select(-uso) 
+
+xt_test <- ts(df_test$co, start = c(2023, 1), end = c(2023, 9), frequency = 12)
+
+t_test <- c(time(xt_test))
+
+D <- rep(1:12, 25)
+
+train <- data.frame(x = xt_train, t = t_train, D = as.factor(D))
+test <- data.frame(x = xt_test, t = t_test, D = as.factor(1:9))
+
+mod <- lm(x ~ t*(D), data = train)
+a <- MASS::boxcox(mod, plotit = FALSE)
+lambda <- a$x[which.max(a$y)]
+
+xt_train2.0 <- (xt_train^lambda - 1)/lambda
+xt_test2.0 <- (xt_test^lambda - 1)/lambda
+
+train2.0 <- data.frame(x = xt_train2.0, t = t_train, D = as.factor(D))
+test2.0 <- data.frame(x = xt_test2.0, t = t_test, D = as.factor(1:9))
+
+mod <- lm(x ~ t*(D), data = train2.0) # Interacciones significativas
+
+pred <- forecast(mod, newdata = test2.0)
+pred_box <- (pred$mean*lambda+1)^(1/lambda)
+```
+
+
+Al tener un período de estacionalidad igual a 12, ajustaremos un modelo regresión lineal con 12 variables dummies. Consideramos, además, la transformación de box-cox utilizando $\lambda=0.22$ para este modelo. Así, podemos obtener las siguientes conclusiones:
+
+- Con un valor-p de 0.01, el modelo rechaza los test de normalidad.
+
+- Por otro lado, con un valor-p de 0.12, el test de Breusch-Pagan no rechaza la homocedasticidad, por lo que podemos concluir que el modelo presenta residuos con varianza constante.
+
+Luego, vemos los gráficos de autocorrelación y autocorrelación parcial de los residuos:
+
+```{r fig.width = 10, fig.height = 3}
+#| echo: false
+#| results: hide
+
+acf_res <- acf(mod$residuals, plot = FALSE)
+acf_data1 <- data.frame(Lag = acf_res$lag, ACF = acf_res$acf)
+
+
+
+pacf_res <- pacf(mod$residuals, plot = FALSE)
+pacf_data1 <- data.frame(Lag = pacf_res$lag, PACF = pacf_res$acf)
+
+n = length(xt_train)
+
+acf1 = ggplot(acf_data1, aes(x = Lag, y = ACF)) +
+  geom_hline(yintercept = 0,
+             linetype = "dashed") + 
+  geom_hline(yintercept = 1.96/sqrt(n),
+             linetype = "dashed",
+             col = "blue") + 
+  geom_hline(yintercept = -1.96/sqrt(n),
+             linetype = "dashed",
+             col = "blue") + 
+  geom_segment(aes(xend = Lag,
+                   yend = 0),
+               color = "purple",
+               size = 1) + # Líneas verticales
+  geom_point(size = 2.5,
+             shape = 21,
+             fill = "purple") + # Puntos de color en el extremo de las líneas
+  labs(x = "Lag",
+       y = "ACF",
+       title = "Gráfico de Autocorrelación para los residuos del modelo de regresión lineal") +
+  theme_bw() +
+  theme(axis.text.y = element_text(size = 8),
+        # axis.ticks.y = element_blank(),
+        axis.title.y = element_text(size = 8),
+        plot.title = element_text(size = 10,
+                                  face = "bold", # Titulo en negrita
+                                  color = "black",
+                                  hjust = 0.5),
+        axis.title.x = element_text(size = 8),
+        axis.text.x = element_text(size = 8))
+
+pacf1 = pacf_data1 %>%
+  ggplot(aes(x = Lag, y = PACF)) +
+  geom_hline(yintercept = 0,
+             linetype = "dashed") + 
+  geom_hline(yintercept = 1.96/sqrt(n),
+             linetype = "dashed",
+             col = "blue") + 
+  geom_hline(yintercept = -1.96/sqrt(n),
+             linetype = "dashed",
+             col = "blue") + 
+  geom_segment(aes(xend = Lag,
+                   yend = 0),
+               color = "purple",
+               size = 1) + # Líneas verticales
+  geom_point(size = 2.5,
+             shape = 21,
+             fill = "purple") + # Puntos de color en el extremo de las líneas
+  labs(x = "Lag",
+       y = "PACF",
+       title = "Gráfico de Autocorrelación Parcial para los residuos del modelo de regresión lineal") +
+  theme_bw() +
+  theme(axis.text.y = element_text(size = 8),
+        # axis.ticks.y = element_blank(),
+        axis.title.y = element_text(size = 8),
+        plot.title = element_text(size = 10,
+                                  face = "bold", # Titulo en negrita
+                                  color = "black",
+                                  hjust = 0.5),
+        axis.title.x = element_text(size = 8),
+        axis.text.x = element_text(size = 8))+
+  scale_y_continuous(limits = c(-0.8,0.8))
+
+(acf1 | pacf1)
+```
+
+De esta manera, se puede apreciar que el modelo que sugiere esta estructura de correlación corresponde a un ARMA(2,4).
 
 ### Ajuste con función `auto.arima()`
+
+CAMBIAR LOS VALORES CON LOS DATOS DE ESTA WEÁ
 
 Si se realiza el ajuste de la serie de tiempo usando la función `auto.arima()` de la librería `forecast`. Esta recomienda usar un modelo AR(1) en los datos y de los resultados del ajuste, es posible dar razones de porque es recomendable usar este modelo:
 
@@ -296,7 +439,7 @@ acf_data <- data.frame(Lag = acf_residuals$lag, ACF = acf_residuals$acf)
 pacf_residuals <- pacf(fit$residuals, plot = FALSE)
 pacf_data <- data.frame(Lag = pacf_residuals$lag, PACF = pacf_residuals$acf)
 
-n = nrow(acf_data)
+n = length(xt_train)
 ```
 
 ```{r, fig.width = 10, fig.height = 3}
@@ -382,43 +525,43 @@ predicciones_validacion <- forecast(fit, newdata = t_test,h = 11)
 \toprule
 Mes & Valor Real & Predicción Modelo 1 & Predicción Modelo AR(1) \\
 \hline
-Enero & 0.37 & 0.47 & 0.29  \\
+Enero & 0.37 & 0.35 & 0.29  \\
 \hline
-Febrero  & 0.57 & 0.54 & 0.31 \\
+Febrero  & 0.57 & 0.33 & 0.31 \\
 \hline
-Marzo & 0.56 & 0.54 & 0.43  \\
+Marzo & 0.56 & 0.39 & 0.43  \\
 \hline
-Abril & 0.66 & 0.58 & 0.73  \\
+Abril & 0.66 & 0.60 & 0.73  \\
 \hline
-Mayo & 1.17 & 0.92 & 1.91  \\
+Mayo & 1.17 & 0.94 & 1.91  \\
 \hline
-Junio & 1.53 & 1.27 & 1.47  \\
+Junio & 1.53 & 1.44 & 1.47  \\
 \hline
-Julio & 1.47 & 1.20 & 1.40  \\
+Julio & 1.47 & 1.41 & 1.40  \\
 \hline
-Agosto & 0.98 & 0.77 & 0.88  \\
+Agosto & 0.98 & 0.90 & 0.88  \\
 \hline
-Septiembre & 0.73 & 0.62 & 0.56  \\
+Septiembre & 0.73 & 0.57 & 0.56  \\
 \bottomrule
 \end{tabular}
-\caption{Tabla con Cuartiles}
+\caption{Comparación de predicciones}
 \label{tab:cuartiles}
 \end{table}
 
-A simple vista de la Tabla 2, es claro observar, que hay valores que si se estiman bastante bien como el mes de abril o agosto, y otros que fallan rotundamente como mayo. Dado que de esta forma es dificil determinar cual es mejor se usarán algunos valores para medir la calidad del ajuste como el MAPE o MSE, los cuales pueden ser observados en la Tabla 3:
+A simple vista de la Tabla 2, es claro observar, que hay valores que si se estiman bastante bien como el mes de abril o agosto, y otros que fallan rotundamente como mayo. Dado que de esta forma es difícil determinar cuál es mejor se usarán algunos valores para medir la calidad del ajuste como el MAPE o MSE, los cuales pueden ser observados en la Tabla 3:
 
 \begin{table}[ht]
 \centering
 \begin{tabular}{| c | c | c | c | c | c |}
 \hline
- & RMSE & MAE & MPE & MAPE & MASE \\
+ & RMSE & MAE & MAPE & R2adj \\
 \hline
-Modelo 1 & 1 & 2 & 3 & 4 & 5 \\
+Regresión Lineal & 0.15 & 0.12 & 16.35 & 0.90 \\
 \hline
-Modelo AR(1) & 0.24 & 0.14 & -3.94 & 17.27 & 0.70 \\
+Modelo AR(1) & 0.24 & 0.14 & 17.27 & 0.70 \\
 \bottomrule
 \end{tabular}
-\caption{Tabla con Cuartiles}
+\caption{Medidas de calidad de ajuste}
 \label{tab:cuartiles}
 \end{table}
 
