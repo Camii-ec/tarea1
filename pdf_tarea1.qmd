@@ -118,7 +118,7 @@ t <- as.numeric(time(Xt))
 
 ## Análisis Exploratorio
 
-Los niveles de Monóxido de Carbono registrados en Pudahuel presentan los siguientes valores:
+Los niveles de Monóxido de Carbono (CO) registrados en Pudahuel presentan los siguientes valores:
 
 ```{r, fig.width = 10, fig.height = 3}
 # Graficos de series de tiempo
@@ -169,7 +169,7 @@ box_plot = df %>%
 time_serie | box_plot
 ```
 
-Del gráfico anterior se puede se puede ver que los niveles de Monóxido de Carbono se concentran principalmente se concentran en valores cercanos a $0.5$, igualmente se observa con una gran varianza. a modo de resumen se puede presentar la tabla de abajo, resumiendo los valores del gráfico anterior.
+Del gráfico anterior se puede ver que los niveles de CO son valores cercanos a $0.5$, igualmente se observa que hay una gran varianza. A modo de resumen, se ven los valores del gráfico anterior en la Tabla 1.
 
 \begin{table}[ht]
 \centering
@@ -192,7 +192,7 @@ Mínimo & 1° Cuartil & Mediana & Promedio & 3° Cuartil & Máximo & Valores NA 
 
 Si se realiza el ajuste de la serie de tiempo usando la función `auto.arima()` de la librería `forecast`. Esta recomienda usar un modelo AR(1) en los datos y de los resultados del ajuste, es posible dar razones de porque es recomendable usar este modelo:
 
-- Los residuos son homocedasticos, esto es sencillo de notar, ya que, el test de Breusch-Pagan no se rechaza a un nivel de confianza al $5\%$, por lo que se permite afirmar que los residuos son de varianza constante.
+- Los residuos son homocedásticos, esto es sencillo de notar, ya que, el test de Breusch-Pagan no se rechaza a un nivel de confianza al $5\%$, por lo que se permite afirmar que los residuos son de varianza constante.
 
 - No hay autocorrelación en los residuos: Como el ínteres es que no existan patrones en los residuos, es bastante bueno que el modelo AR(1) que recomienda la función `auto.arima()`, demuestre que no pasa:
 
@@ -266,7 +266,7 @@ pacf = pacf_data %>%
              shape = 21,
              fill = "purple") + # Puntos de color en el extremo de las líneas
   labs(x = "Lag",
-       y = "ACF",
+       y = "PACF",
        title = "Gráfico de Autocorrelación Parcial para los residuos del modelo AR(1)") +
   theme_bw() +
   theme(axis.text.y = element_text(size = 8),
@@ -277,7 +277,72 @@ pacf = pacf_data %>%
                                   color = "black",
                                   hjust = 0.5),
         axis.title.x = element_text(size = 8),
-        axis.text.x = element_text(size = 8))
+        axis.text.x = element_text(size = 8))+
+  scale_y_continuous(limits = c(-0.8,0.8))
 
 (acf | pacf)
 ```
+
+- Los residuos no son normales: A pesar de que el modelo creado es bueno en muchos sentido, no logra normalizar los residuos, lo que se comprueba sencillamente con test de Kolmogorov-Smirnov, pues el valor-p asociado a dicho estadístico es extremadamente pequeño lo que nos hace rechazar la normalidad en los residuos.
+
+# Predicciones de los modelos:
+
+Ahora que se tiene ambos modelos, una forma de poder determinar su funcionamiento es probandolos, para ello se usarán datos de testeo correspondiente a los meses de enero a septiembre del 2023, los cuales se pueden visualizar en la Tabla 2:
+
+```{r echo=FALSE}
+predicciones_validacion <- forecast(fit, newdata = t_test,h = 11)
+```
+
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{| c | c | c | c |}
+\toprule
+Mes & Valor Real & Predicción Modelo 1 & Predicción Modelo AR(1) \\
+\hline
+Enero & 0.37 & 0.47 & 0.29  \\
+\hline
+Febrero  & 0.57 & 0.54 & 0.31 \\
+\hline
+Marzo & 0.56 & 0.54 & 0.43  \\
+\hline
+Abril & 0.66 & 0.58 & 0.73  \\
+\hline
+Mayo & 1.17 & 0.92 & 1.91  \\
+\hline
+Junio & 1.53 & 1.27 & 1.47  \\
+\hline
+Julio & 1.47 & 1.20 & 1.40  \\
+\hline
+Agosto & 0.98 & 0.77 & 0.88  \\
+\hline
+Septiembre & 0.73 & 0.62 & 0.56  \\
+\bottomrule
+\end{tabular}
+\caption{Tabla con Cuartiles}
+\label{tab:cuartiles}
+\end{table}
+
+A simple vista de la Tabla 2, es claro observar, que hay valores que si se estiman bastante bien como el mes de abril o agosto, y otros que fallan rotundamente como mayo. Dado que de esta forma es dificil determinar cual es mejor se usarán algunos valores para medir la calidad del ajuste como el MAPE o MSE, los cuales pueden ser observados en la Tabla 3:
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{| c | c | c | c | c | c |}
+\hline
+ & RMSE & MAE & MPE & MAPE & MASE \\
+\hline
+Modelo 1 & 1 & 2 & 3 & 4 & 5 \\
+\hline
+Modelo AR(1) & 0.24 & 0.14 & -3.94 & 17.27 & 0.70 \\
+\bottomrule
+\end{tabular}
+\caption{Tabla con Cuartiles}
+\label{tab:cuartiles}
+\end{table}
+
+Argumentar que volaita es cada uno y pq es mejor el auto.arima pero no se como sacar los valores del modelo 1
+
+## Conclusión y Discusión
+
+Explicar por alguna razón pq el auto.arima es mejor en general q como van subiendo año a añlo las volaitas y no se alguna otra cosa que se nos ocurra para terminar esto yuju
+
