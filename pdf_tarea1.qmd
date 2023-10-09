@@ -177,7 +177,7 @@ Del gráfico anterior se puede ver que los niveles de CO son valores cercanos a 
 \toprule
 Mínimo & 1° Cuartil & Mediana & Promedio & 3° Cuartil & Máximo & Valores NA \\
 \midrule
-0.1305 & 0.3318 & 0.5716 & 0.8599 & 1.2484 & 3.4134 & 2 \\
+0.1305 & 0.3318 & 0.5716 & 0.8599 & 1.2484 & 3.4134 & 3  \\
 \bottomrule
 \end{tabular}
 \caption{Tabla con Cuartiles}
