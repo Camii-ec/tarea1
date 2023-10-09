@@ -93,23 +93,25 @@ ggPacf(mod$residuals)
 a <- MASS::boxcox(mod)
 lambda <- a$x[which.max(a$y)]
 
-t_train2.0 <- (t_train^lambda - 1)/lambda
-t_test2.0 <- (t_test^lambda - 1)/lambda
+xt_train2.0 <- (xt_train^lambda - 1)/lambda
+xt_test2.0 <- (xt_test^lambda - 1)/lambda
 
 ## Ajuste 2.0 con la transformación de box-cox ---
 
-train2.0 <- data.frame(x = xt_train, t = t_train2.0, D = as.factor(D))
-test2.0 <- data.frame(x = xt_test, t = t_test2.0, D = as.factor(1:9))
+train2.0 <- data.frame(x = xt_train2.0, t = t_train, D = as.factor(D))
+test2.0 <- data.frame(x = xt_test2.0, t = t_test, D = as.factor(1:9))
 
 mod <- lm(x ~ t*(D), data = train2.0) # Interacciones significativas
 summary(mod)
 
-plot(xt_train)
+plot(xt_train2.0)
 lines(mod$fitted.values ~ t_train, col = "red")
 
 pred <- forecast(mod, newdata = test2.0)
+pred_box <- (pred$mean*lambda+1)^(1/lambda)
+
 plot(xt_test, lwd = 2)
-lines(ts(pred$mean, start = c(2023, 1), frequency = 12), 
+lines(ts(pred_box, start = c(2023, 1), frequency = 12), 
       col = "red", lty = 3, lwd = 2)
 # YA NO ES COMO EL HOYO X2
 
@@ -120,13 +122,13 @@ lmtest::bptest(mod) # ES HOMOCEDÁSTICO
 acf(mod$residuals)
 pacf(mod$residuals)
 
-MLmetrics::MAPE(y_pred = pred$mean,
+MLmetrics::MAPE(y_pred = pred_box,
                 y_true = xt_test)*100 # TA MUY BONITA LA WEÁ, YA NO VALE PICO
 
-sqrt(MLmetrics::MSE(y_pred = pred$mean,
+sqrt(MLmetrics::MSE(y_pred = pred_box,
                     y_true = xt_test)) #RMSE
 
-MLmetrics::MAE(y_pred = pred$mean,
+MLmetrics::MAE(y_pred = pred_box,
                y_true = xt_test) #MAE
 
 
