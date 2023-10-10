@@ -170,9 +170,9 @@ box_plot = df %>%
 time_serie / box_plot
 ```
 
-Del gráfico anterior se puede ver que los niveles de CO son valores cercanos a $0.5$. Sin embargo, igualmente se observa que los datos presentan una gran varianza. 
+Del gráfico anterior se puede ver que la mitad de los datos presenta un nivel de CO cercano al $0.5$ y la otra mitad tiene un rango de valores mucho mayor. De igual forma se aprecia que los datos presentan una gran varianza. 
 
-Luego, evaluamos los gráficos de autocorrelación y autocorrelación parcial de los datos presentados anteriormente:
+Luego, si evaluamos los gráficos de autocorrelación y autocorrelación parcial de los datos presentados anteriormente, es claro notar que estos presentan una alta estacionalidad y correlación, a través del tiempo, tal como se observa a continuación:
 
 ```{r}
 # ACF base
@@ -256,7 +256,7 @@ PACF = pacf_data %>%
 
 ## Ajuste del modelo
 
-Como se pudo ver en el gráfico de autocorrelación, presentamos estacionalidad en los datos. Es por esto que utilizaremos la transformación de box-cox en ambos ajustes.
+Como se pudo ver en el gráfico de autocorrelación, presentamos estacionalidad en los datos. Es por esto que utilizaremos la transformación de box-cox en los ajustes propuestos:
 
 ### Ajuste modelo de regresión lineal con dummies
 
@@ -316,7 +316,16 @@ Al tener un período de estacionalidad igual a 12, ajustaremos un modelo regresi
 
 - Por otro lado, con un valor-p de 0.12, el test de Breusch-Pagan no rechaza la homocedasticidad, por lo que podemos concluir que el modelo presenta residuos con varianza constante.
 
-Luego, vemos los gráficos de autocorrelación y autocorrelación parcial de los residuos:
+- Si se revisa el gráfico de Ljung-Box, es claro notar que se rechaza el test de blancura, por lo que se concluye que los datos podrían provenir de un ruido blanco.
+
+```{r fig.width = 10, fig.height = 4}
+#| echo: false
+#| results: hide
+Box.Ljung.Test(mod$residuals)
+axis(1, 0:22)
+```
+
+Luego, si vemos los gráficos de autocorrelación y autocorrelación parcial de los residuos, vemos que aun existen patrones de estacionalidad.
 
 ```{r fig.width = 10, fig.height = 8}
 #| echo: false
@@ -403,15 +412,11 @@ De esta manera, se puede apreciar que el modelo que sugiere esta estructura de c
 
 En base a las conclusiones obtenidas anteriormente, utilizaremos la función `auto.arima()` de la librería forecast para ajustar un modelo ARMA(2,4) a los datos. Algunos resultados importantes de este modelo son los siguientes:
 
-- Los residuos son homocedásticos, ya que el test de Breusch-Pagan no se rechaza a un nivel de confianza de $1\%$.
-
-- Gracias al test de Box-Ljung, podemos ver que, considerando distintos lags, los residuos no presentan autocorrelación serial.
-
 ```{r echo = FALSE}
 Xt <- ts(xt_train, start = c(1998), frequency = 12)
 t <- as.numeric(time(Xt))
 lambda2 <- forecast::BoxCox.lambda(Xt, method = "guerrero")
-fit <- forecast::auto.arima(xt_train, max.p = 5, max.q = 5, lambda = "auto")
+fit <- forecast::auto.arima(Xt,start.p = 2,start.q = 4, lambda = lambda2)
 
 # ACF
 acf_residuals <- acf(fit$residuals, plot = FALSE)
@@ -423,6 +428,21 @@ pacf_data <- data.frame(Lag = pacf_residuals$lag, PACF = pacf_residuals$acf)
 
 n = length(xt_train)
 ```
+
+Al usar en la función `autorima` un modelo ARMA(2,4), la función recomienda un modelo AR(1) que explique de mejor manera la estacionariedad de los datos, de lo que se puede concluir lo siguiente:
+
+- Los residuos son homocedásticos, ya que el test de Breusch-Pagan no se rechaza a un nivel de confianza de $1\%$, pues el valor-p asociado es de $0.12$
+
+- Si se revisa el gráfico de Ljung-Box, es claro notar que no se rechaza el test de blancura, pues a pesar de tener datos muy cercanos a la banda de confianza ninguno esta por debajo de la misma, por lo que se concluye que los datos no provienen de un ruido blanco.
+
+```{r fig.width = 10, fig.height = 4}
+#| echo: false
+#| results: hide
+Box.Ljung.Test(fit$residuals)
+axis(1, 0:22)
+```
+
+- Tambien, es posible observar que los residuos no presentan autocorrelación serial, tal como se muestra a continuación
 
 ```{r, fig.width = 10, fig.height = 8}
 acf = ggplot(acf_data, aes(x = Lag, y = ACF)) +
@@ -541,7 +561,7 @@ Ambos modelos generan predicciones bastante cercanas a los valores reales para l
 \hline
 Regresión Lineal & 0.15 & 0.12 & 16.35\\
 \hline
-Modelo ARMA(4,2) & 0.23 & 0.14 & 17.00 \\
+Modelo AR(1) & 0.23 & 0.14 & 17.00 \\
 \bottomrule
 \end{tabular}
 \caption{Medidas de calidad de ajuste}
