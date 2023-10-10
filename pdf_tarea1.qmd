@@ -413,23 +413,17 @@ De esta manera, se puede apreciar que el modelo que sugiere esta estructura de c
 
 ### Ajuste con función `auto.arima()`
 
-CAMBIAR LOS VALORES CON LOS DATOS DE ESTA WEÁ
+Si se realiza el ajuste de la serie de tiempo usando la función `auto.arima()` de la librería `forecast` siguiendo la recomendación anterior se ajustará un modelo ARMA(4,2) en los datos y de los resultados, es posible dar razones de porque es recomendable usar este modelo:
 
-Si se realiza el ajuste de la serie de tiempo usando la función `auto.arima()` de la librería `forecast`. Esta recomienda usar un modelo AR(1) en los datos y de los resultados del ajuste, es posible dar razones de porque es recomendable usar este modelo:
+- Los residuos son homocedásticos, ya que, el test de Breusch-Pagan no se rechaza a un nivel de confianza al $1\%$, por lo que se afirma que los residuos son de varianza constante.
 
-- Los residuos son homocedásticos, esto es sencillo de notar, ya que, el test de Breusch-Pagan no se rechaza a un nivel de confianza al $5\%$, por lo que se permite afirmar que los residuos son de varianza constante.
-
-- No hay autocorrelación en los residuos: Como el ínteres es que no existan patrones en los residuos, es bastante bueno que el modelo AR(1) que recomienda la función `auto.arima()`, demuestre que no pasa:
+- No hay autocorrelación en los residuos, es decir, no existen patrones en los residuos.
 
 ```{r echo = FALSE}
-train <- df %>% 
-  filter(uso == "Entrenamiento")
-
-Xt <- na.omit(train$co)
-Xt <- ts(Xt, start = c(1997,5), frequency = 12)
+Xt <- ts(xt_train, start = c(1998), frequency = 12)
 t <- as.numeric(time(Xt))
-lambda <- forecast::BoxCox.lambda(Xt, method = "guerrero")
-fit <- forecast::auto.arima(Xt, lambda = lambda)
+lambda2 <- forecast::BoxCox.lambda(Xt, method = "guerrero")
+fit <- forecast::auto.arima(Xt,start.p = 4,start.q = 2, lambda = lambda2)
 
 # ACF
 acf_residuals <- acf(fit$residuals, plot = FALSE)
@@ -508,14 +502,14 @@ pacf = pacf_data %>%
 (acf | pacf)
 ```
 
-- Los residuos no son normales: A pesar de que el modelo creado es bueno en muchos sentido, no logra normalizar los residuos, lo que se comprueba sencillamente con test de Kolmogorov-Smirnov, pues el valor-p asociado a dicho estadístico es extremadamente pequeño lo que nos hace rechazar la normalidad en los residuos.
+- A pesar de que el modelo creado es bueno en muchos sentido, no logra normalizar los residuos, pues el valor-p asociado al `ks.test` es muy pequeño lo que nos hace rechazar la normalidad en los residuos.
 
 # Predicciones de los modelos:
 
 Ahora que se tiene ambos modelos, una forma de poder determinar su funcionamiento es probandolos, para ello se usarán datos de testeo correspondiente a los meses de enero a septiembre del 2023, los cuales se pueden visualizar en la Tabla 2:
 
 ```{r echo=FALSE}
-predicciones_validacion <- forecast(fit, newdata = t_test,h = 11)
+predicciones_validacion <- forecast(fit, newdata = t_test,h = 9)
 ```
 
 
@@ -523,31 +517,32 @@ predicciones_validacion <- forecast(fit, newdata = t_test,h = 11)
 \centering
 \begin{tabular}{| c | c | c | c |}
 \toprule
-Mes & Valor Real & Predicción Modelo 1 & Predicción Modelo AR(1) \\
+Mes & Valor Real & Predicción Modelo 1 & Predicción Modelo ARMA(4,2) \\
 \hline
-Enero & 0.37 & 0.35 & 0.29  \\
+Enero & 0.37 & 0.35 & 0.31  \\
 \hline
-Febrero  & 0.57 & 0.33 & 0.31 \\
+Febrero  & 0.57 & 0.33 & 0.30 \\
 \hline
-Marzo & 0.56 & 0.39 & 0.43  \\
+Marzo & 0.56 & 0.39 & 0.45  \\
 \hline
-Abril & 0.66 & 0.60 & 0.73  \\
+Abril & 0.66 & 0.60 & 0.77  \\
 \hline
-Mayo & 1.17 & 0.94 & 1.91  \\
+Mayo & 1.17 & 0.94 & 1.09  \\
 \hline
-Junio & 1.53 & 1.44 & 1.47  \\
+Junio & 1.53 & 1.44 & 1.58  \\
 \hline
-Julio & 1.47 & 1.41 & 1.40  \\
+Julio & 1.47 & 1.41 & 1.81  \\
 \hline
-Agosto & 0.98 & 0.90 & 0.88  \\
+Agosto & 0.98 & 0.90 & 0.95  \\
 \hline
-Septiembre & 0.73 & 0.57 & 0.56  \\
+Septiembre & 0.73 & 0.57 & 0.58  \\
 \bottomrule
 \end{tabular}
 \caption{Comparación de predicciones}
 \label{tab:cuartiles}
 \end{table}
 
+ARREGLAR ESTA PARTE
 A simple vista de la Tabla 2, es claro observar, que hay valores que si se estiman bastante bien como el mes de abril o agosto, y otros que fallan rotundamente como mayo. Dado que de esta forma es difícil determinar cuál es mejor se usarán algunos valores para medir la calidad del ajuste como el MAPE o MSE, los cuales pueden ser observados en la Tabla 3:
 
 \begin{table}[ht]
@@ -558,7 +553,7 @@ A simple vista de la Tabla 2, es claro observar, que hay valores que si se estim
 \hline
 Regresión Lineal & 0.15 & 0.12 & 16.35 & 0.90 \\
 \hline
-Modelo AR(1) & 0.24 & 0.14 & 17.27 & 0.70 \\
+Modelo ARMA(4,2) & 0.22 & 0.14 & 16.96 & no hay \\
 \bottomrule
 \end{tabular}
 \caption{Medidas de calidad de ajuste}
