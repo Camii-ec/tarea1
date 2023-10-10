@@ -13,6 +13,7 @@ format:
       - right=20mm
       - heightrounded
     fig-pos: H
+    classoption: twocolumn
 author: 
   - name: "Sebastián Celaya"
   - name: "Camila Echeverría"
@@ -120,7 +121,7 @@ t <- as.numeric(time(Xt))
 
 Los niveles de Monóxido de Carbono (CO) registrados en Pudahuel presentan los siguientes valores:
 
-```{r, fig.width = 10, fig.height = 3}
+```{r, fig.width = 10, fig.height = 8}
 # Graficos de series de tiempo
 time_serie = train %>% 
   ggplot(aes(x = fecha_yymmdd, y = co)) +
@@ -166,25 +167,12 @@ box_plot = df %>%
   labs(title = "Boxplot de Monóxido de Carbono",
        subtitle = "Medida en Pudahuel")
 
-time_serie | box_plot
+time_serie / box_plot
 ```
 
-Del gráfico anterior se puede ver que los niveles de CO son valores cercanos a $0.5$, igualmente se observa que hay una gran varianza. A modo de resumen, se ven los valores del gráfico anterior en la Tabla 1.
+Del gráfico anterior se puede ver que los niveles de CO son valores cercanos a $0.5$. Sin embargo, igualmente se observa que los datos presentan una gran varianza. 
 
-\begin{table}[ht]
-\centering
-\begin{tabular}{| c | c | c | c | c | c | c |}
-\toprule
-Mínimo & 1° Cuartil & Mediana & Promedio & 3° Cuartil & Máximo & Valores NA \\
-\midrule
-0.1305 & 0.3318 & 0.5716 & 0.8599 & 1.2484 & 3.4134 & 2  \\
-\bottomrule
-\end{tabular}
-\caption{Tabla con Cuartiles}
-\label{tab:cuartiles}
-\end{table}
-
-Los datos temporales anteriormente presentados presentan los siguientes gráficos de autocorrelación y de autocorrelación parcial:
+Luego, evaluamos los gráficos de autocorrelación y autocorrelación parcial de los datos presentados anteriormente:
 
 ```{r}
 # ACF base
@@ -200,7 +188,7 @@ pacf_data <- data.frame(Lag = pacf$lag,
 n = nrow(df)
 ```
 
-```{r, fig.width = 10, fig.height = 3}
+```{r, fig.width = 10, fig.height = 8}
 ACF = ggplot(acf_data, aes(x = Lag, y = ACF)) +
   geom_hline(yintercept = 0,
              linetype = "dashed") + 
@@ -262,7 +250,7 @@ PACF = pacf_data %>%
         axis.title.x = element_text(size = 8),
         axis.text.x = element_text(size = 8))
 
-(ACF | PACF)
+(ACF / PACF)
 ```
 
 
@@ -330,7 +318,7 @@ Al tener un período de estacionalidad igual a 12, ajustaremos un modelo regresi
 
 Luego, vemos los gráficos de autocorrelación y autocorrelación parcial de los residuos:
 
-```{r fig.width = 10, fig.height = 3}
+```{r fig.width = 10, fig.height = 8}
 #| echo: false
 #| results: hide
 
@@ -362,7 +350,7 @@ acf1 = ggplot(acf_data1, aes(x = Lag, y = ACF)) +
              fill = "purple") + # Puntos de color en el extremo de las líneas
   labs(x = "Lag",
        y = "ACF",
-       title = "Gráfico de Autocorrelación para los residuos del modelo de regresión lineal") +
+       title = "Autocorrelación para los residuos del modelo de regresión") +
   theme_bw() +
   theme(axis.text.y = element_text(size = 8),
         # axis.ticks.y = element_blank(),
@@ -393,7 +381,7 @@ pacf1 = pacf_data1 %>%
              fill = "purple") + # Puntos de color en el extremo de las líneas
   labs(x = "Lag",
        y = "PACF",
-       title = "Gráfico de Autocorrelación Parcial para los residuos del modelo de regresión lineal") +
+       title = "Autocorrelación Parcial para los residuos del modelo de regresión") +
   theme_bw() +
   theme(axis.text.y = element_text(size = 8),
         # axis.ticks.y = element_blank(),
@@ -406,24 +394,24 @@ pacf1 = pacf_data1 %>%
         axis.text.x = element_text(size = 8))+
   scale_y_continuous(limits = c(-0.8,0.8))
 
-(acf1 | pacf1)
+(acf1 / pacf1)
 ```
 
 De esta manera, se puede apreciar que el modelo que sugiere esta estructura de correlación corresponde a un ARMA(2,4).
 
 ### Ajuste con función `auto.arima()`
 
-Si se realiza el ajuste de la serie de tiempo usando la función `auto.arima()` de la librería `forecast` siguiendo la recomendación anterior se ajustará un modelo ARMA(4,2) en los datos y de los resultados, es posible dar razones de porque es recomendable usar este modelo:
+En base a las conclusiones obtenidas anteriormente, utilizaremos la función `auto.arima()` de la librería forecast para ajustar un modelo ARMA(2,4) a los datos. Algunos resultados importantes de este modelo son los siguientes:
 
-- Los residuos son homocedásticos, ya que, el test de Breusch-Pagan no se rechaza a un nivel de confianza al $1\%$, por lo que se afirma que los residuos son de varianza constante.
+- Los residuos son homocedásticos, ya que el test de Breusch-Pagan no se rechaza a un nivel de confianza de $1\%$.
 
-- No hay autocorrelación en los residuos, es decir, no existen patrones en los residuos.
+- Gracias al test de Box-Ljung, podemos ver que, considerando distintos lags, los residuos no presentan autocorrelación serial.
 
 ```{r echo = FALSE}
 Xt <- ts(xt_train, start = c(1998), frequency = 12)
 t <- as.numeric(time(Xt))
 lambda2 <- forecast::BoxCox.lambda(Xt, method = "guerrero")
-fit <- forecast::auto.arima(Xt,start.p = 4,start.q = 2, lambda = lambda2)
+fit <- forecast::auto.arima(xt_train, max.p = 5, max.q = 5, lambda = "auto")
 
 # ACF
 acf_residuals <- acf(fit$residuals, plot = FALSE)
@@ -436,7 +424,7 @@ pacf_data <- data.frame(Lag = pacf_residuals$lag, PACF = pacf_residuals$acf)
 n = length(xt_train)
 ```
 
-```{r, fig.width = 10, fig.height = 3}
+```{r, fig.width = 10, fig.height = 8}
 acf = ggplot(acf_data, aes(x = Lag, y = ACF)) +
   geom_hline(yintercept = 0,
              linetype = "dashed") + 
@@ -499,70 +487,68 @@ pacf = pacf_data %>%
         axis.text.x = element_text(size = 8))+
   scale_y_continuous(limits = c(-0.8,0.8))
 
-(acf | pacf)
+(acf / pacf)
 ```
 
-- A pesar de que el modelo creado es bueno en muchos sentido, no logra normalizar los residuos, pues el valor-p asociado al `ks.test` es muy pequeño lo que nos hace rechazar la normalidad en los residuos.
+- A pesar de que el modelo creado es bueno en muchos sentidos, el valor-p del test de Kolmogorov-Smirnov es mucho menor a 0.05, lo que nos indica que los residuos rechazan la hipótesis nula de normalidad.
 
-# Predicciones de los modelos:
+### Comparación de los modelos
 
-Ahora que se tiene ambos modelos, una forma de poder determinar su funcionamiento es probandolos, para ello se usarán datos de testeo correspondiente a los meses de enero a septiembre del 2023, los cuales se pueden visualizar en la Tabla 2:
+Para poder probar ambos modelos ajustados, utilizaremos los datos de testeo para generar predicciones desde enero hasta septiembre del 2023. Estos resultados se presentan en la siguiente tabla:
 
 ```{r echo=FALSE}
-predicciones_validacion <- forecast(fit, newdata = t_test,h = 9)
+predicciones_validacion <- forecast(fit, newdata = t_test, h = 9)
 ```
 
 
-\begin{table}[ht]
+
+\begin{table}[H]
 \centering
 \begin{tabular}{| c | c | c | c |}
 \toprule
-Mes & Valor Real & Predicción Modelo 1 & Predicción Modelo ARMA(4,2) \\
+Mes & Valor Real & Regresión & ARMA(4,2) \\
 \hline
-Enero & 0.37 & 0.35 & 0.31  \\
+Enero & 0.37 & 0.35 & 0.32  \\
 \hline
-Febrero  & 0.57 & 0.33 & 0.30 \\
+Febrero  & 0.57 & 0.33 & 0.33 \\
 \hline
-Marzo & 0.56 & 0.39 & 0.45  \\
+Marzo & 0.56 & 0.39 & 0.44  \\
 \hline
-Abril & 0.66 & 0.60 & 0.77  \\
+Abril & 0.66 & 0.60 & 0.75  \\
 \hline
-Mayo & 1.17 & 0.94 & 1.09  \\
+Mayo & 1.17 & 0.94 & 1.21  \\
 \hline
-Junio & 1.53 & 1.44 & 1.58  \\
+Junio & 1.53 & 1.44 & 1.63  \\
 \hline
-Julio & 1.47 & 1.41 & 1.81  \\
+Julio & 1.47 & 1.41 & 1.64  \\
 \hline
-Agosto & 0.98 & 0.90 & 0.95  \\
+Agosto & 0.98 & 0.90 & 0.99  \\
 \hline
-Septiembre & 0.73 & 0.57 & 0.58  \\
+Septiembre & 0.73 & 0.57 & 0.61  \\
 \bottomrule
 \end{tabular}
 \caption{Comparación de predicciones}
 \label{tab:cuartiles}
 \end{table}
 
-ARREGLAR ESTA PARTE
-A simple vista de la Tabla 2, es claro observar, que hay valores que si se estiman bastante bien como el mes de abril o agosto, y otros que fallan rotundamente como mayo. Dado que de esta forma es difícil determinar cuál es mejor se usarán algunos valores para medir la calidad del ajuste como el MAPE o MSE, los cuales pueden ser observados en la Tabla 3:
+Ambos modelos generan predicciones bastante cercanas a los valores reales para los meses correspondientes. Para complementar esto, en la siguiente tabla compararemos algunas medidas de calidad de ajuste:
 
-\begin{table}[ht]
+\begin{table}[H]
 \centering
 \begin{tabular}{| c | c | c | c | c | c |}
 \hline
- & RMSE & MAE & MAPE & R2adj \\
+ & RMSE & MAE & MAPE \\
 \hline
-Regresión Lineal & 0.15 & 0.12 & 16.35 & 0.90 \\
+Regresión Lineal & 0.15 & 0.12 & 16.35\\
 \hline
-Modelo ARMA(4,2) & 0.22 & 0.14 & 16.96 & no hay \\
+Modelo ARMA(4,2) & 0.23 & 0.14 & 17.00 \\
 \bottomrule
 \end{tabular}
 \caption{Medidas de calidad de ajuste}
 \label{tab:cuartiles}
 \end{table}
 
-Argumentar que volaita es cada uno y pq es mejor el auto.arima pero no se como sacar los valores del modelo 1
+## Conclusión 
 
-## Conclusión y Discusión
-
-Explicar por alguna razón pq el auto.arima es mejor en general q como van subiendo año a añlo las volaitas y no se alguna otra cosa que se nos ocurra para terminar esto yuju
+A pesar de que el modelo de regresión lineal pareciera tener un mejor desempeño en base a las medidas de calidad de ajuste, no podemos olvidar que no cumple con el supuesto de normalidad y que posee autocorrelación serial, por lo que el modelo ARMA(2,4) representa un mejor ajuste para nuestros datos.
 

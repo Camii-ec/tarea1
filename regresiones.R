@@ -36,7 +36,6 @@ df_test <- df %>%
   select(-uso) 
 
 xt_test <- ts(df_test$co, start = c(2023, 1), end = c(2023, 9), frequency = 12)
-na.omit(xt_test)
 
 t_test <- c(time(xt_test))
 plot(xt_test, lwd = 2)
@@ -118,6 +117,9 @@ lines(ts(pred_box, start = c(2023, 1), frequency = 12),
 plot(mod$residuals, type = "l") # No pareciera haber tendencia
 shapiro.test(mod$residuals) # Rechaza normalidad
 lmtest::bptest(mod) # ES HOMOCEDÁSTICO
+Box.test(mod$residuals, lag = 12) # Tiene autocorrelación estacional
+Box.test(mod$residuals, lag = 1) # Tiene autocorrelación 
+
 
 acf(mod$residuals)
 pacf(mod$residuals)

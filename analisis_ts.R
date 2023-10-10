@@ -52,6 +52,8 @@ predicciones_validacion <- forecast(fit, newdata = t_test,h = 11)
 autoplot(predicciones_validacion)
 
 summary(predicciones_validacion)
+Box.Ljung.Test(fit$residuals)
+Box.Ljung.Test(mod$residuals)
 
 valores_predichos_validacion <- predicciones_validacion$mean
 
