@@ -526,7 +526,7 @@ predicciones_validacion <- forecast(fit, newdata = t_test, h = 9)
 \centering
 \begin{tabular}{| c | c | c | c |}
 \toprule
-Mes & Valor Real & Regresión & ARMA(4,2) \\
+Mes & Valor Real & Regresión & AR(1) \\
 \hline
 Enero & 0.37 & 0.35 & 0.32  \\
 \hline
