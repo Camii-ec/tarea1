@@ -316,7 +316,7 @@ Al tener un período de estacionalidad igual a 12, ajustaremos un modelo regresi
 
 - Por otro lado, con un valor-p de 0.12, el test de Breusch-Pagan no rechaza la homocedasticidad, por lo que podemos concluir que el modelo presenta residuos con varianza constante.
 
-- Si se revisa el gráfico de Ljung-Box, es claro notar que se rechaza el test de blancura, por lo que se concluye que los datos podrían provenir de un ruido blanco.
+- Si se revisa el gráfico de Box-Ljung, es claro notar que se rechaza el test de blancura, por lo que se concluye que los datos podrían provenir de un ruido blanco.
 
 ```{r fig.width = 10, fig.height = 4}
 #| echo: false
@@ -410,7 +410,7 @@ De esta manera, se puede apreciar que el modelo que sugiere esta estructura de c
 
 ### Ajuste con función `auto.arima()`
 
-En base a las conclusiones obtenidas anteriormente, utilizaremos la función `auto.arima()` de la librería forecast para ajustar un modelo ARMA(2,4) a los datos. Algunos resultados importantes de este modelo son los siguientes:
+En base a las conclusiones obtenidas anteriormente, utilizaremos la función `auto.arima()` de la librería forecast para ajustar un modelo ARMA(2,4) a los datos. 
 
 ```{r echo = FALSE}
 Xt <- ts(xt_train, start = c(1998), frequency = 12)
@@ -429,11 +429,11 @@ pacf_data <- data.frame(Lag = pacf_residuals$lag, PACF = pacf_residuals$acf)
 n = length(xt_train)
 ```
 
-Al usar en la función `autorima` un modelo ARMA(2,4), la función recomienda un modelo AR(1) que explique de mejor manera la estacionariedad de los datos, de lo que se puede concluir lo siguiente:
+Al utilizar la función especificando los parámetros de un modelo ARMA(2,4), se recomienda el uso de un modelo AR(1) para explicar de mejor manera la estacionaridad de los datos. Así, las conclusiones obtenidas son las siguientes:
 
 - Los residuos son homocedásticos, ya que el test de Breusch-Pagan no se rechaza a un nivel de confianza de $1\%$, pues el valor-p asociado es de $0.12$
 
-- Si se revisa el gráfico de Ljung-Box, es claro notar que no se rechaza el test de blancura, pues a pesar de tener datos muy cercanos a la banda de confianza ninguno esta por debajo de la misma, por lo que se concluye que los datos no provienen de un ruido blanco.
+- Si se revisa el gráfico de Box-Ljung, es claro notar que no se rechaza el test de blancura, pues a pesar de tener datos muy cercanos a la banda de confianza ninguno esta por debajo de la misma, por lo que se concluye que los datos no provienen de un ruido blanco.
 
 ```{r fig.width = 10, fig.height = 4}
 #| echo: false
